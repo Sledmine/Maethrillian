@@ -12,3 +12,6 @@ local maethrillian = require 'maethrillian'
 
 ### Objective
 Maethrillian is a library made as consecuence of the refactoring of Forge (for Forge Island), it's main purpose is to isolate "deep" data manipulation in a separated module, providing standard functions for other projects.
+
+## Support the project by joining us on Discord
+https://discord.gg/j6Eb8VN

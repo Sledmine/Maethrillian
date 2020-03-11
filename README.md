@@ -6,7 +6,7 @@ Compression / Decompression and communication tools for data
 - Data Request Formatting (See standard request format for more info)
 
 ### Implementation
-```
+```lua
 local maethrillian = require 'maethrillian'
 ```
 

@@ -63,7 +63,7 @@ function maethrillian.decompressObject(data, compressionList)
 
         if (compressionFormat) then
             -- There is a compression format available
-            value = string.unpack(compressionFormat, glue.fromhex(encodedValue))
+            value = string.unpack(compressionFormat, glue.fromhex(tostring(encodedValue)))
         elseif (tonumber(encodedValue) ~= nil) then
             -- Convert value into number
             value = tonumber(encodedValue)
@@ -81,7 +81,7 @@ end
 ---@param format table
 function maethrillian.convertRequestToObject(request, format)
     local data = {}
-    local dataRequest = glue.string.split(",", request)
+    local dataRequest = glue.string.split(request, ",")
     for index, value in pairs(dataRequest) do
         local propertyName = format[index]
         if (propertyName) then

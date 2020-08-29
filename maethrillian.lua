@@ -1,70 +1,82 @@
 ------------------------------------------------------------------------------
 -- Maethrillian library
--- Author: Sledmine
--- Version: 3.0
--- Compression, decompression and tools for data manipulation
+-- Sledmine
+-- Version 4.0
+-- Encode, decode tools for data manipulation
 ------------------------------------------------------------------------------
 local glue = require "glue"
 local maethrillian = {}
 
---- Compress object data in the given format
----@param data table
----@param compressionList table
----@param hex boolean
+--- Compress table data in the given format
+---@param inputTable table
+---@param requestFormat table
+---@param noHex boolean
 ---@return table
-function maethrillian.compressObject(data, compressionList, hex)
-    local compressedData = {}
-    for property, encodedValue in pairs(data) do
-        local compressionFormat = compressionList[property]
-        if (compressionFormat) then
-            if (hex) then
-                compressedData[property] = glue.tohex(string.pack(compressionFormat, encodedValue))
-            else
-                compressedData[property] = string.pack(compressionFormat, encodedValue)
+function maethrillian.encodeTable(inputTable, requestFormat, noHex)
+    local compressedTable = {}
+    for property, value in pairs(inputTable) do
+        if (type(value) ~= "table") then
+            local expectedProperty
+            local encodeFormat
+            for formatIndex, format in pairs(requestFormat) do
+                if (glue.arrayhas(format, property)) then
+                    expectedProperty = format[1]
+                    encodeFormat = format[2]
+                end
             end
-        else
-            compressedData[property] = encodedValue
+            if (encodeFormat) then
+                if (not noHex) then
+                    compressedTable[property] = glue.tohex(string.pack(encodeFormat, value))
+                else
+                    compressedTable[property] = string.pack(encodeFormat, value)
+                end
+            else
+                if (expectedProperty == property) then
+                    compressedTable[property] = value
+                end
+            end
         end
     end
-    return compressedData
+    return compressedTable
 end
 
---- Format table into request
--- List or an Object with data, Optional the order result of the object properties
----@param data table
----@param order table
--- String with formatted data
---- @return string
-function maethrillian.convertObjectToRequest(data, order)
+--- Format table into request string
+---@param inputTable table
+---@param requestFormat table
+---@return string
+function maethrillian.tableToRequest(inputTable, requestFormat, separator)
     local requestData = {}
-    for currentProperty, value in pairs(data) do
-        if (order) then
-            for position, propertyName in pairs(order) do
-                if (currentProperty == propertyName) then
-                    requestData[position] = value
+    for property, value in pairs(inputTable) do
+        if (requestFormat) then
+            for formatIndex, format in pairs(requestFormat) do
+                if (glue.arrayhas(format, property)) then
+                    requestData[formatIndex] = value
                 end
             end
         else
             requestData[#requestData + 1] = value
         end
     end
-    return table.concat(requestData, ",")
+    return table.concat(requestData, separator)
 end
 
---- Decompress data given an object/table and expected compression
----@param data table
----@param compressionList any
-function maethrillian.decompressObject(data, compressionList)
+--- Decompress table data given expected encoding format
+---@param inputTable table
+---@param requestFormat any
+function maethrillian.decodeTable(inputTable, requestFormat)
     local dataDecompressed = {}
-    for property, encodedValue in pairs(data) do
-
-        -- Get compression format for current value
-        local compressionFormat = compressionList[property]
-
-        if (compressionFormat) then
+    for property, encodedValue in pairs(inputTable) do
+        -- Get encode format for current value
+        local encodeFormat
+        for formatIndex, format in pairs(requestFormat) do
+            if (glue.arrayhas(format, property)) then
+                encodeFormat = format[2]
+            end
+        end
+        if (encodeFormat) then
             -- There is a compression format available
-            value = string.unpack(compressionFormat, glue.fromhex(tostring(encodedValue)))
-        elseif (tonumber(encodedValue) ~= nil) then
+            value = string.unpack(encodeFormat, glue.fromhex(tostring(encodedValue)))
+        elseif (tonumber(encodedValue)) then
             -- Convert value into number
             value = tonumber(encodedValue)
         else
@@ -76,19 +88,26 @@ function maethrillian.decompressObject(data, compressionList)
     return dataDecompressed
 end
 
---- Transform request into data given string and format
+--- Transform request into table given
 ---@param request string
----@param format table
-function maethrillian.convertRequestToObject(request, format)
-    local data = {}
-    local dataRequest = glue.string.split(request, ",")
-    for index, value in pairs(dataRequest) do
-        local propertyName = format[index]
+---@param requestFormat table
+function maethrillian.requestToTable(request, requestFormat, separator)
+    local outputTable = {}
+    local splitRequest = glue.string.split(request, separator)
+    for index, value in pairs(splitRequest) do
+        local currentFormat = requestFormat[index]
+        local propertyName = currentFormat[1]
+        local encodeFormat = currentFormat[2]
+        -- Convert value into number
+        local toNumberValue = tonumber(value)
+        if (not encodeFormat and toNumberValue) then
+            value = toNumberValue
+        end
         if (propertyName) then
-            data[propertyName] = value
+            outputTable[propertyName] = value
         end
     end
-    return data
+    return outputTable
 end
 
 return maethrillian
